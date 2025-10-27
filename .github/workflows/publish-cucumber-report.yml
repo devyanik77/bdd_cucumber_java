@@ -1,34 +1,22 @@
 name: Publish Cucumber HTML Report to GitHub Pages
+permissions:
+  contents: write
+  pages: write
+
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   publish-report:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Optional: run tests to regenerate the report (uncomment if you want CI to run tests)
-      # - name: Run Maven tests
-      #   run: mvn -B test
-
-      - name: Ensure report folder exists
-        run: |
-          if [ ! -d "target/cucumber-reports" ]; then
-            echo "Report folder target/cucumber-reports not found"
-            ls -la target || true
-            exit 1
-          fi
-          echo "Found report folder, contents:"
-          ls -la target/cucumber-reports || true
-
-      - name: Deploy to GitHub Pages (gh-pages)
+      - name: Deploy to GitHub Pages (gh-pages) using PAT
         uses: peaceiris/actions-gh-pages@v3
         with:
+          personal_token: ${{ secrets.GH_PAGES_PAT }}
           publish_dir: ./target/cucumber-reports
           publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
