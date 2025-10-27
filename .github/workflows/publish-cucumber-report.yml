@@ -13,6 +13,7 @@ on:
 jobs:
   publish-report:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,51 +32,52 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Install Google Chrome and matching Chromedriver
+      # ✅ Install Chrome only (WebDriverManager handles chromedriver)
+      - name: Install Google Chrome
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6
-      
-          # Install a specific Chrome version (example: 127.x). Change CHROME_VERSION as needed.
-          CHROME_VERSION=127.0.0
-          # Use browser-actions/setup-chrome action instead if preferred
-      
-          # If you can use apt pinning (if package version available), otherwise use the official .deb
+          sudo apt-get install -y wget unzip xvfb libxi6 libxss1 libappindicator3-1 fonts-liberation libasound2
           wget -q -O /tmp/google-chrome-stable_current_amd64.deb \
             https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i /tmp/google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
-      
-          # Determine major version from installed chrome and download matching chromedriver
-          CHROME_MAJOR=$(google-chrome --version | sed -E 's/.* ([0-9]+)\..*/\1/')
-          echo "Chrome major version: $CHROME_MAJOR"
-          CHROMEDRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR)
-          echo "Using chromedriver version: $CHROMEDRIVER_VERSION"
-      
-          wget -N https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip -P /tmp
-          sudo unzip -o /tmp/chromedriver_linux64.zip -d /usr/local/bin
-          sudo chmod +x /usr/local/bin/chromedriver
-      
           google-chrome --version || true
-          chromedriver --version || true
 
-      - name: Start Xvfb (display) for browsers if needed
+      - name: Start Xvfb (display) for browsers
         run: |
-          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 & 
+          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
+      # ✅ NEW: set CHROME_ARGS so your DriverFactory runs headless
+      - name: Set CHROME_ARGS for headless Chrome in CI
+        run: |
+          echo "CHROME_ARGS=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080 --disable-software-rasterizer" >> $GITHUB_ENV
+
+      # ✅ Run Maven tests and save output
       - name: Run Maven tests (generate cucumber report)
-        run: mvn -B test
+        run: mvn -B -e test | tee mvn.log
+
+      # ✅ (Optional) upload logs/reports for debugging
+      - name: Upload Maven logs and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: |
+            mvn.log
+            target/surefire-reports
+            target/cucumber-reports
 
       - name: Ensure report folder exists
         run: |
           if [ ! -d "target/cucumber-reports" ]; then
-            echo "Report folder target/cucumber-reports not found"
+            echo "❌ Report folder target/cucumber-reports not found!"
             ls -la target || true
             exit 1
           fi
-          echo "Found report folder, contents:"
+          echo "✅ Found report folder, contents:"
           ls -la target/cucumber-reports || true
 
+      # ✅ Publish cucumber report to GitHub Pages
       - name: Deploy to GitHub Pages (gh-pages) using PAT
         uses: peaceiris/actions-gh-pages@v3
         with:
