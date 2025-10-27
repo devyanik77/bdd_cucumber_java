@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Failed suite [CucumberBDDTestSuite]" guice-stage="DEVELOPMENT" verbose="0">
+  <parameter name="environment" value="QA"/>
+  <parameter name="browser" value="Chrome"/>
+  <parameter name="user" value="devyanik77"/>
+  <parameter name="timestamp" value="2025-10-09 11:47:48 UTC"/>
+  <listeners>
+    <listener class-name="org.testng.reporters.EmailableReporter2"/>
+  </listeners>
+  <test thread-count="5" name="CucumberTests(failed)" verbose="0">
+    <classes>
+      <class name="runners.CucumberTest_testng">
+        <methods>
+          <include name="setUpClass"/>
+          <include name="runScenario" invocation-numbers="0"/>
+          <include name="tearDownClass"/>
+        </methods>
+      </class> <!-- runners.CucumberTest_testng -->
+    </classes>
+  </test> <!-- CucumberTests(failed) -->
+</suite> <!-- Failed suite [CucumberBDDTestSuite] -->
