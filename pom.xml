@@ -43,13 +43,13 @@
 		</dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-devtools-v127</artifactId>
+			<artifactId>selenium-devtools-v141</artifactId>
 			<version>4.25.0</version>
 		</dependency>
 		<dependency>
 		  <groupId>org.seleniumhq.selenium</groupId>
 		  <artifactId>selenium-chrome-driver</artifactId>
-		  <version>4.19.1</version> <!-- or latest stable -->
+		  <version>4.25.0</version> <!-- or latest stable -->
 		</dependency>
 
 		<dependency>
