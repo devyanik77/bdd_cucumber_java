@@ -1,3 +1,4 @@
+# Full workflow with improved Chrome/ChromeDriver install (replace your current .github/workflows/publish-cucumber-report.yml)
 name: Publish Cucumber HTML Report to GitHub Pages
 
 permissions:
@@ -31,27 +32,35 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Install Chrome & Chromedriver
+      - name: Install Chrome & matching Chromedriver
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6
-          # Install Google Chrome
+          sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4
+          # Install Google Chrome stable
           wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
-          # Install latest Chromedriver
-          LATEST=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-          wget -N https://chromedriver.storage.googleapis.com/$LATEST/chromedriver_linux64.zip -P /tmp
+          # Determine Chrome major version and download matching Chromedriver
+          CHROME_MAJOR=$(google-chrome --version | grep -oP '\d+' | head -1)
+          echo "Detected Chrome major version: $CHROME_MAJOR"
+          # Query the chromedriver storage for the latest release for that major
+          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR")
+          if [ -z "$CHROMEDRIVER_VERSION" ]; then
+            echo "Could not find chromedriver for Chrome major $CHROME_MAJOR; falling back to latest"
+            CHROMEDRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+          fi
+          echo "Using chromedriver version: $CHROMEDRIVER_VERSION"
+          wget -N "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" -P /tmp
           sudo unzip -o /tmp/chromedriver_linux64.zip -d /usr/local/bin
           sudo chmod +x /usr/local/bin/chromedriver
-          # show versions
+          # Show versions
           google-chrome --version || true
           chromedriver --version || true
 
       - name: Start Xvfb (display) for browsers if needed
         run: |
-          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 & 
+          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Run Maven tests (generate cucumber report)
