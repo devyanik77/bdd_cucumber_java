@@ -5,17 +5,51 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      # Install Chrome for Selenium (WebDriverManager downloads the driver)
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: latest
+          install-dependencies: true
+          install-chromedriver: false
+
+      # Xvfb display + headless flags so UI tests run in CI
+      - name: Start Xvfb + set CHROME_ARGS
+        run: |
+          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+          echo "CHROME_ARGS=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080 --disable-software-rasterizer" >> $GITHUB_ENV
+
+      - name: Cache Maven repo
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # If you want CI to stay green even when tests fail, add -Dmaven.test.failure.ignore=true
       - name: Build & test (Maven)
-        run: mvn -B -ntp clean test
+        run: mvn -B -ntp clean test | tee mvn.log
+
+      # Always upload artifacts (even on failure)
       - name: Upload cucumber report
         if: always()
         uses: actions/upload-artifact@v4
@@ -24,3 +58,5 @@ jobs:
           path: |
             target/cucumber-reports/**
             target/surefire-reports/**
+            mvn.log
+          if-no-files-found: warn
